@@ -4,8 +4,7 @@ enum StateSwitch {
   BLINK
 };
 int led = LED_BUILTIN;
-int brightness = 0;
-int fadeAmount = 5;
+//Numero d'admission
 String etd = "2280684";
 StateSwitch currentState = BLINK;
 const short NB_BLINK = 4;
@@ -15,6 +14,7 @@ void setup() {
   pinMode(led,OUTPUT);
 }
 
+//Fonction pour afficher l'état en cours
 void displayState(StateSwitch currentState){
   String state;
   if (currentState == BLINK){
@@ -43,34 +43,43 @@ void blink(){
 }
 
 void fade(){
-
-
+  int brightness = 0;
+  //Varie de 0 jusqu'à 255 (0 à 100%) pendant 2048ms
+  for (int i = 0; i <= 255; i++){
+    brightness += i;
+    analogWrite(led,brightness);
+    delay(8);
+  }
 }
+
+void on_off(){
+  //S'éteint durant 300ms
+  digitalWrite(led,LOW);
+  delay(300);
+  //S'allume pendant 2sec
+  digitalWrite(led,HIGH);
+  delay(2000);
+  //S'éteint pendant 1sec
+  digitalWrite(led,LOW);
+  delay(1000);
+  }
 
 void loop() {
   switch(currentState){
-    //Commence a blink
     case BLINK:
-      Serial.println("Début de blink");
-      delay(500);
       blink();
       displayState(currentState);
       currentState = FADE;
       break;
     case FADE:
-      Serial.println("Début de fade");
-      delay(500);
       fade();
       displayState(currentState);
       currentState = ON_OFF;
       break;
-    // case ON_OFF:
-    //   Serial.println("Début de fade");
-    //   delay(500);
-    //   on_off();
-    //   displayState(currentState);
-    //   currentState = BLINK;
-    //   break;
+    case ON_OFF:
+      on_off();
+      displayState(currentState);
+      currentState = BLINK;
+      break;
   }
-
 }
