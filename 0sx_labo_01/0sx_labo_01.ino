@@ -43,10 +43,8 @@ void blink(){
 }
 
 void fade(){
-  int brightness = 0;
-  //Varie de 0 jusqu'à 255 (0 à 100%) pendant 2048ms
-  for (int i = 0; i <= 255; i++){
-    brightness += i;
+  //Varie de 0 jusqu'à 255 (0 à 100%, selon mon numero d'admission) pendant 2048ms
+  for (int brightness = 0; brightness <= 255; brightness++){
     analogWrite(led,brightness);
     delay(8);
   }
@@ -62,7 +60,7 @@ void on_off(){
   //S'éteint pendant 1sec
   digitalWrite(led,LOW);
   delay(1000);
-  }
+}
 
 void loop() {
   switch(currentState){
