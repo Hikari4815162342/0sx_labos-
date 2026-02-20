@@ -6,10 +6,6 @@ const int rangeOfValues = 20;
 const int BUTTON = 2;
 
 unsigned long currentTime = 0;
-unsigned long lastTime = 0;
-int currentState = 0;
-
-
 
 void setup() {
   Serial.begin(9600);
@@ -19,21 +15,7 @@ void setup() {
   pinMode(BUTTON, INPUT_PULLUP);
 }
 
-void switchLed(int mappedValue){
-  int ledIndex = mappedValue / 5;
-  for (int i = 0; i < SIZE_LED; i++){
-    if (ledIndex == 4){
-      digitalWrite(LED_PINS[SIZE_LED - 1],HIGH);
-    }else if (i == ledIndex){
-      digitalWrite(LED_PINS[i], HIGH);
-    }else{
-      digitalWrite(LED_PINS[i],LOW);
-    }
-  }
-}
-
 void loop() {
-  currentTime = millis();
   potentiometerValue = analogRead(POTENTIOMETER);
   int mappedValue = map(potentiometerValue, 0, 1023, 0, rangeOfValues);
   switchLed(mappedValue);
@@ -48,13 +30,15 @@ bool isClicked() {
   const int delay = 50;
   static unsigned long lastTime = 0;
 
+  currentTime = millis();
+
   int currentState = digitalRead(BUTTON);
 
   if (currentState != lastState) {
-    lastTime = millis();
+    lastTime = currentTime;
   }
 
-  if (millis() - lastTime > delay && currentState != state) {
+  if (currentTime - lastTime > delay && currentState != state) {
     state = currentState;
     if (state == 0) return true;
   }
@@ -62,12 +46,14 @@ bool isClicked() {
   lastState = currentState;
   return false;
 }
+
 void displayProgressBar(int mappedValue, int rangeValues) {
   int percentage = (mappedValue * 100) / rangeValues;
+  
   Serial.print("[");
   for (int i = 0; i < rangeValues; i++){
     if (i < mappedValue){
-      Serial.print("!");
+      Serial.print("!"); //Mon numéro d'étudiant est 2280684, donc mon avant dernier chiffre est pair donc ce doit être des points d'exclamation
     }else{
       Serial.print(".");
     }
@@ -76,5 +62,22 @@ void displayProgressBar(int mappedValue, int rangeValues) {
   Serial.print(percentage);
   Serial.println("%");
 }
+
+void switchLed(int mappedValue){
+  int ledIndex = mappedValue / 5;
+
+  if (ledIndex >= SIZE_LED){
+    ledIndex = SIZE_LED - 1;
+  }
+
+  for (int i = 0; i < SIZE_LED; i++){ //Mon numéro d'étudiant est 2280684, donc mon dernier chiffre est pair donc j'allume une
+    if (i == ledIndex){               //led selon la position du potentiomètre
+      digitalWrite(LED_PINS[i], HIGH);
+    }else{
+      digitalWrite(LED_PINS[i],LOW);
+    }
+  }
+}
+
 
 
