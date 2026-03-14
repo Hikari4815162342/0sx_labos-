@@ -13,11 +13,11 @@ int Vo;
 float R1 = 10000; 
 float logR2, R2, T, Tc;
 float c1 = 1.129148e-03, c2 = 2.34125e-04, c3 = 8.76741e-08;
-const short TEMP_THRESHOLD = 35;
+const short TEMP_THRESHOLD = 25;
 
 unsigned long currentTime = 0;
 unsigned long serialLast = 0;
-int serialDelay = 2000;
+int interval = 1000;
 
 LCD_I2C lcd(0x27, LCD_COLS, LCD_ROWS); 
 
@@ -33,7 +33,27 @@ void setup() {
 void loop() {
   currentTime = millis();
   controlCooling();
-  readJoystickValue(currentTime);
+  joystickTask();
+}
+bool isClicked() {
+  static int lastState = 1;
+  static int state = 1;
+  const int delay = 50;
+  static unsigned long lastTime = 0;
+
+  int currentState = digitalRead(btn);
+
+  if (currentState != lastState) {
+    lastTime = currentTime;
+  }
+
+  if (currentTime - lastTime > delay && currentState != state) {
+    state = currentState;
+    if (state == 0) return true;
+  }
+
+  lastState = currentState;
+  return false;
 }
 
 void lcdSetup(){
@@ -51,52 +71,83 @@ void lcdSetup(){
   lcd.clear();
 }
 
-void readJoystickValue(unsigned long currentTime){
-  static unsigned long lastTime = 0;
-  int valueX = analogRead(xAxis);
-  delay(100);
-  int valueY = analogRead(yAxis);
-  static int altitude = 0;
-  static int direction = 0;
+void joystickTask(){
+  static unsigned long lastAltitudeTime = 0;
   
-  switch (valueY){
-    case 1023:
-      if (currentTime - lastTime >= 1000){
-        lastTime = currentTime;
-        if (altitude < 200){
-          altitude++;
-        }
-      }
-      break;
-    case 0:
-      if (currentTime - lastTime >= 1000){
-        lastTime = currentTime;
-        if (altitude > 0){
-          altitude--;
-        }
-      }
-      break;
-  }s
+  int valueX = analogRead(xAxis);
+  int valueY = analogRead(yAxis);
+  
+  static int altitude = 0;
+  int direction = map(valueX,0,1023,90,-90);
 
-  switch (valueX){
-     case 1023:
-      if (currentTime - lastTime >= 1000){
-        lastTime = currentTime;
-        if (direction < 90){
-          direction++;
+  if (direction > -5 && direction < 5) {
+    direction = 0;  
+  }
+
+  if (currentTime - lastAltitudeTime >= interval){
+    if (valueY > 800 && altitude < 200){
+      lastAltitudeTime = currentTime;
+      altitude++;
+    }else if (valueY < 200 && altitude > 0){
+      lastAltitudeTime = currentTime;
+      altitude--;
+    }
+  }
+  displayLcdInfos(direction,valueY,altitude);
+  printSerial(valueX, valueY);
+}
+
+void displayLcdInfos(int direction, int yValue, int altitude){
+  static int lcdState = 0;
+  bool cooling = controlCooling();
+
+  switch (lcdState){
+    case 0:
+      if (!isClicked()){
+        lcd.setCursor(0,0);
+        lcd.print("ALT: ");
+        lcd.print(altitude);
+        lcd.print("m");
+        if (yValue < 800 && yValue > 200){
+          lcd.print("           ");
+        }else if (yValue < 500){
+          lcd.print("(DOWN)   ");
+        }else{
+          lcd.print("(UP)   ");
         }
+        lcd.setCursor(0,1);
+        lcd.print("DIR: ");
+        lcd.print(direction);
+        if (direction < 0){
+          lcd.print("(G)   ");
+        }else if (direction == 0){
+          lcd.print("     ");
+        }else{
+          lcd.print("(D)   ");
+        }
+      }else{
+        lcdState = 1;
+        lcd.clear();
       }
       break;
-    case 0:
-      if (currentTime - lastTime >= 1000){
-        lastTime = currentTime;
-        if (direction > -90){
-          direction--;
+    case 1:
+      if (!isClicked()){
+        lcd.setCursor(0,0);
+        lcd.print(Tc);
+        lcd.print(" C");
+        lcd.setCursor(0,1);
+        lcd.print("COOL: ");
+        if (cooling){
+          lcd.print("ON   ");
+        }else{
+          lcd.print("OFF  ");
         }
+      }else{
+        lcdState = 0;
+        lcd.clear();
       }
       break;
   }
-  printSerial(currentTime, valueX, valueY, altitude);
 }
 
 bool controlCooling(){ //Mon numéro d'étudiant est pair donc je dois vérifier la temnpérature
@@ -115,21 +166,17 @@ bool controlCooling(){ //Mon numéro d'étudiant est pair donc je dois vérifier
   return false;
 }
 
-void printSerial(unsigned long serialTime, int xValue, int yValue, int altitude){
+void printSerial(int xValue, int yValue){
   bool cooling = controlCooling();
-  if (serialTime - serialLast >= serialDelay){
-    serialLast = serialTime;
+  if (currentTime - serialLast >= interval){
+    serialLast = currentTime;
     Serial.print("etd:"); 
     Serial.print(etd);
-    Serial.print(",x: ");
+    Serial.print(",x:");
     Serial.print(xValue);
-    Serial.print(",y: ");
+    Serial.print(",y:");
     Serial.print(yValue);
     Serial.print(",sys:");
     Serial.print(cooling);
-    Serial.print(", alt:");
-    Serial.println(altitude);
   }
-
-
 }
