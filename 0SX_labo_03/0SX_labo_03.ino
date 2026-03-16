@@ -13,7 +13,7 @@ int Vo;
 float R1 = 10000; 
 float logR2, R2, T, Tc;
 float c1 = 1.129148e-03, c2 = 2.34125e-04, c3 = 8.76741e-08;
-const short TEMP_THRESHOLD = 25;
+const short TEMP_THRESHOLD = 20;
 
 unsigned long currentTime = 0;
 unsigned long serialLast = 0;
@@ -78,19 +78,19 @@ void joystickTask(){
   int valueY = analogRead(yAxis);
   
   static int altitude = 0;
-  int direction = map(valueX,0,1023,90,-90);
+  int direction = map(valueX,0,1022,-90,90);
 
   if (direction > -5 && direction < 5) {
     direction = 0;  
   }
 
   if (currentTime - lastAltitudeTime >= interval){
-    if (valueY > 800 && altitude < 200){
-      lastAltitudeTime = currentTime;
-      altitude++;
-    }else if (valueY < 200 && altitude > 0){
+    if (valueY > 800 && altitude > 0){
       lastAltitudeTime = currentTime;
       altitude--;
+    }else if (valueY < 200 && altitude < 200){
+      lastAltitudeTime = currentTime;
+      altitude++;
     }
   }
   displayLcdInfos(direction,valueY,altitude);
@@ -111,9 +111,9 @@ void displayLcdInfos(int direction, int yValue, int altitude){
         if (yValue < 800 && yValue > 200){
           lcd.print("           ");
         }else if (yValue < 500){
-          lcd.print("(DOWN)   ");
+          lcd.print("(UP)     ");
         }else{
-          lcd.print("(UP)   ");
+          lcd.print("(DOWN)   ");
         }
         lcd.setCursor(0,1);
         lcd.print("DIR: ");
@@ -177,6 +177,6 @@ void printSerial(int xValue, int yValue){
     Serial.print(",y:");
     Serial.print(yValue);
     Serial.print(",sys:");
-    Serial.print(cooling);
+    Serial.println(cooling);
   }
 }
