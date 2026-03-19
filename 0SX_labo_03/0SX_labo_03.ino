@@ -13,7 +13,7 @@ int Vo;
 float R1 = 10000; 
 float logR2, R2, T, Tc;
 float c1 = 1.129148e-03, c2 = 2.34125e-04, c3 = 8.76741e-08;
-const short TEMP_THRESHOLD = 20;
+const short TEMP_THRESHOLD = 35;
 
 unsigned long currentTime = 0;
 unsigned long serialLast = 0;
