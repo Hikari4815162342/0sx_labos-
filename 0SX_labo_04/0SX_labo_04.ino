@@ -12,15 +12,15 @@ const int PIN_SERVO = 9;
 Servo door;
 OneButton openBtn = OneButton(PIN_OPEN_BTN, true, true);
 OneButton stopBtn = OneButton(PIN_STOP_BTN, true, true);
-LCD_I2C lcd(0x27, 16, 2);
+const int LCD_COLS = 16;
+const int LCD_ROWS = 2;
+LCD_I2C lcd(0x27, LCD_COLS, LCD_ROWS);
 HCSR04 hc(TRIGGER_PIN, ECHO_PIN);
 
-enum ServoState {OPEN, CLOSE, WAIT, STOP};
-ServoState currentDoorState = STOP;
+enum ServoState {OPEN, CLOSE, WAIT, STOP, ON_HOLD};
+ServoState currentDoorState = ON_HOLD;
 int angle = 10;
-int step = 1;
 unsigned long currentTime = 0;
-unsigned long lastTime = 0;
 int interval = 20;
 int waitTime = 10000;
 
@@ -30,32 +30,124 @@ void setup() {
   lcd.backlight();
 
   door.attach(PIN_SERVO);
-  door.detach();
+  door.write(angle);
 
-  // openBtn.attachClick(onClickOpen);
-  // stopBtn.attachClick(onClickStop);
+  openBtn.attachClick(onClickOpen);
+  stopBtn.attachClick(onClickStop);
 
   pinMode(TRIGGER_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
 }
 
 void loop() { 
+  currentTime = millis();
+  
   openBtn.tick();
   stopBtn.tick();
   updateDoor();
 }
-
 void updateDoor(){
-  float distance = hc.dist();
-  currentTime = millis();
+  static unsigned long lastDistanceReading = 0;
+  static float distance = 10;
+  String lcdMsg = "Porte fermee";
 
-  if (distance < 5){
+  if (currentTime - lastDistanceReading >= 100){
+    lastDistanceReading = currentTime;
+    distance = hc.dist();
+  }
+
+ if (distance <= 5 && currentDoorState != WAIT && currentDoorState != STOP)){
     currentDoorState = OPEN;
   }
+  
+  if (currentDoorState != STOP && !door.attached()){
+    door.attach(PIN_SERVO);
+  }
 
-  if (currentTime - lastTime >= interval){
-    lastTime = currentTime;
-    
+  switch (currentDoorState){
+    case OPEN:
+      open();
+      lcdMsg = "Ouverture...";
+      break;
+    case WAIT:
+      wait();
+      break;
+    case CLOSE:
+      close();
+      lcdMsg = "Fermeture...";
+      break;
+    case STOP:
+      lcdMsg = "ARRET D'URGENCE!";
+      break;
+    case ON_HOLD:
+      break;
+  }
+
+  printLcd(lcdMsg);
+}
+
+void open(){
+  static unsigned long lastOpenTime = 0;
+  if (currentTime - lastOpenTime >= interval){
+    lastOpenTime = currentTime;
+    if (angle < 170){
+      ++angle;
+    }else {
+      angle = 170;
+      currentDoorState = WAIT;
+    }
+    door.write(angle);
+    Serial.println(angle);
   }
 }
+
+void wait(){
+  delay(waitTime);
+  currentDoorState = CLOSE;
+}
+
+void close(){
+  static unsigned long lastCloseTime = 0;
+  if (currentTime - lastCloseTime >= interval){
+    lastCloseTime = currentTime;
+    if (angle > 10){
+      door.write(--angle);
+    }else {
+      angle = 10;
+      door.write(angle);
+      door.detach();
+      currentDoorState = ON_HOLD;
+    }
+    Serial.println(angle);
+  }
+}
+
+void onClickOpen(){
+  if (currentDoorState == ON_HOLD){
+    currentDoorState = OPEN;
+  }else if (currentDoorState == CLOSE){
+    currentDoorState = OPEN;
+  }
+}
+
+bool onClickStop(){
+  static bool state = true;
+  if (state && (currentDoorState != ON_HOLD)) {
+    currentDoorState = STOP;
+    state = false; 
+  }else if (!state){
+    currentDoorState = CLOSE;
+    state = true;
+  }
+}
+
+void printLcd(String lcdMsg){
+  lcd.setCursor(0,0);
+  int sizeMsg = sizeof(lcdMsg)/sizeof(lcdMsg[0]);
+  lcd.print(lcdMsg);
+  for (int i = sizeMsg - 1; i < LCD_COLS; i++){
+    lcd.print(" ");
+  }
+}
+
 
