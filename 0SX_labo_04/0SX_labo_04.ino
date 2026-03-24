@@ -16,9 +16,10 @@ const int LCD_COLS = 16;
 const int LCD_ROWS = 2;
 LCD_I2C lcd(0x27, LCD_COLS, LCD_ROWS);
 HCSR04 hc(TRIGGER_PIN, ECHO_PIN);
+const int DIST_THRESHOLD = 5;
 
-enum ServoState {OPEN, CLOSE, WAIT, STOP, ON_HOLD};
-ServoState currentDoorState = ON_HOLD;
+enum ServoState {OPEN, CLOSE, WAIT, STOP, CLOSED};
+ServoState currentDoorState = CLOSED;
 int angle = 10;
 unsigned long currentTime = 0;
 int interval = 20;
@@ -56,11 +57,11 @@ void updateDoor(){
     distance = hc.dist();
   }
 
- if (distance <= 5 && currentDoorState != WAIT && currentDoorState != STOP)){
+ if (distance <= DIST_THRESHOLD && currentDoorState != WAIT && currentDoorState != STOP){
     currentDoorState = OPEN;
   }
   
-  if (currentDoorState != STOP && !door.attached()){
+  if ((currentDoorState != STOP || currentDoorState != CLOSED || currentDoorState != WAIT) && !door.attached()){
     door.attach(PIN_SERVO);
   }
 
@@ -71,6 +72,7 @@ void updateDoor(){
       break;
     case WAIT:
       wait();
+      lcdMsg = "Attente...";
       break;
     case CLOSE:
       close();
@@ -79,7 +81,7 @@ void updateDoor(){
     case STOP:
       lcdMsg = "ARRET D'URGENCE!";
       break;
-    case ON_HOLD:
+    case CLOSED:
       break;
   }
 
@@ -94,6 +96,7 @@ void open(){
       ++angle;
     }else {
       angle = 170;
+      door.detach();
       currentDoorState = WAIT;
     }
     door.write(angle);
@@ -102,8 +105,16 @@ void open(){
 }
 
 void wait(){
-  delay(waitTime);
-  currentDoorState = CLOSE;
+  static unsigned long lastWaitTime = 0;
+  
+  if (lastWaitTime == 0){
+    lastWaitTime = currentTime;
+  }
+  
+  if (currentTime - lastWaitTime >= waitTime){
+    lastWaitTime = 0;
+    currentDoorState = CLOSE;
+  }
 }
 
 void close(){
@@ -111,19 +122,19 @@ void close(){
   if (currentTime - lastCloseTime >= interval){
     lastCloseTime = currentTime;
     if (angle > 10){
-      door.write(--angle);
+      --angle;
     }else {
       angle = 10;
-      door.write(angle);
       door.detach();
-      currentDoorState = ON_HOLD;
+      currentDoorState = CLOSED;
     }
+    door.write(angle);
     Serial.println(angle);
   }
 }
 
 void onClickOpen(){
-  if (currentDoorState == ON_HOLD){
+  if (currentDoorState == CLOSED){
     currentDoorState = OPEN;
   }else if (currentDoorState == CLOSE){
     currentDoorState = OPEN;
@@ -132,8 +143,9 @@ void onClickOpen(){
 
 bool onClickStop(){
   static bool state = true;
-  if (state && (currentDoorState != ON_HOLD)) {
+  if (state && (currentDoorState != CLOSED)) {
     currentDoorState = STOP;
+    door.detach();
     state = false; 
   }else if (!state){
     currentDoorState = CLOSE;
