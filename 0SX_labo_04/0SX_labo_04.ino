@@ -100,7 +100,6 @@ void open(){
       currentDoorState = WAIT;
     }
     door.write(angle);
-    Serial.println(angle);
   }
 }
 
@@ -129,7 +128,6 @@ void close(){
       currentDoorState = CLOSED;
     }
     door.write(angle);
-    Serial.println(angle);
   }
 }
 
@@ -143,11 +141,11 @@ void onClickOpen(){
 
 bool onClickStop(){
   static bool state = true;
-  if (state && (currentDoorState != CLOSED)) {
+  if (state) {
     currentDoorState = STOP;
     door.detach();
     state = false; 
-  }else if (!state){
+  }else{
     currentDoorState = CLOSE;
     state = true;
   }
