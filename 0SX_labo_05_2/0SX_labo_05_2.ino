@@ -199,7 +199,7 @@ void screen2(){
 void emergencyScreen(){
   lcd.setCursor(0,0);
   
-  lcd.print("URGENCE!");
+  printLcd("URGENCE");
 
   bool transition = buttonPressed;
   if (transition){
