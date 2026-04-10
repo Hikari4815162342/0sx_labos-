@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 
 enum DCState{
   FORWARD,
@@ -15,6 +16,7 @@ class DCMotor{
     void setSpeed(int speed);
     void setState(DCState currentState);
     void updateDCMotor();
+    bool isActive();
   private:
     int input1;
     int input2;
