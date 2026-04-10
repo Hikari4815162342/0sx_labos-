@@ -9,8 +9,8 @@ const int MIN_SPEED = 60;
 
 DCMotor myDC(input1, input2);
 
-int COLS_LCD = 16;
-int ROWS_LCD = 2;
+const int COLS_LCD = 16;
+const int ROWS_LCD = 2;
 
 LCD_I2C lcd(0x27, COLS_LCD, ROWS_LCD); 
 enum LcdScreens{
@@ -149,23 +149,26 @@ void updateLcd(){
 void screen1(){
   lcd.setCursor(0,0);
   
+  String active = "";
   if (myDC.isActive()){
-    printLcd(String("Actif : ") + "OUI");
+    active = "OUI";
   }else{
-    printLcd(String("Actif : ")  + "NON");
+    active = "NON";
   }
+  printLcd("Actif : " + active);
 
   lcd.setCursor(0,1);
+  
   DCState state = myDC.getState();
-  String sens = "";
+  String direction = "";
   if (state == FORWARD){
-    sens = "AVANT";
+    direction = "AVANT";
   }else if (state == BACKWARD){
-    sens = "ARRIERE";
+    direction = "ARRIERE";
   }else if (state == OFF){
-    sens = "ARRET";
+    direction = "ARRET";
   }
-  printLcd("Sens : " + sens);
+  printLcd("Sens : " + direction);
 
   bool transition = buttonPressed;
   if (transition){
