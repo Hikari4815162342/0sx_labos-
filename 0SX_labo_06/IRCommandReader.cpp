@@ -1,24 +1,33 @@
-// #include "IRCommandReader.h"
+#include <Arduino.h>
+#include <IRremote.hpp>
+#include "IRCommandReader.h"
 
-// IRCommandReader::IRCommandReader(int pinIR){
-//   pin = pinIR;
-// }
+IRCommandReader::IRCommandReader(){};
 
-// void IRCommandReader::init(){
-//   IrReceiver.begin(pin, ENABLE_LED_FEEDBACK);
-// }
+void IRCommandReader::init(int pin){
+  IrReceiver.begin(pin, ENABLE_LED_FEEDBACK);
+}
 
-// int IRCommandReader::IRCommandUpdate(){
-//   if (IrReceiver.decode()) {
-//     unsigned long command = IrReceiver.decodedIRData.command;
-//     if (IrReceiver.decodedIRData.flags && IRDATA_FLAGS_IS_REPEAT || command == 0) {
-//       IrReceiver.resume();
-//       return;
-//     }
+int IRCommandReader::getCommand(){
+  if (IrReceiver.decode()) {
+      int command = IrReceiver.decodedIRData.command;
 
-//     switch (command, HEX){
-//     }
-
-//     IrReceiver.resume();
-//   }
-// }
+      if (IrReceiver.decodedIRData.flags && IRDATA_FLAGS_IS_REPEAT || command == 0) {
+        IrReceiver.resume();
+        return;
+      }
+  
+    switch (command){
+        case 12: command = 1; break;
+        case 24: command = 2; break;
+        case 94: command = 3; break;
+        case 8: command = 4; break;
+        default: command = 0; break;
+      }
+    
+    Serial.println(command);
+    IrReceiver.resume();
+    return command;
+  }
+  return 0;
+}
