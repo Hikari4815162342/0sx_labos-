@@ -8,6 +8,13 @@ void IRCommandReader::init(int pin){
   IrReceiver.begin(pin, ENABLE_LED_FEEDBACK);
 }
 
+bool IRCommandReader::commandReceived(){
+  if (IrReceiver.decode()){
+    return true;
+  }
+  return false;
+}
+
 int IRCommandReader::getCommand(){
   if (IrReceiver.decode()) {
       int command = IrReceiver.decodedIRData.command;
@@ -23,9 +30,8 @@ int IRCommandReader::getCommand(){
         case 94: command = 3; break;
         case 8: command = 4; break;
         default: command = 0; break;
-      }
+    }
     
-    Serial.println(command);
     IrReceiver.resume();
     return command;
   }

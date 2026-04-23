@@ -7,4 +7,5 @@ class IRCommandReader{
     IRCommandReader();
     void init(int pin);
     int getCommand();
+    bool commandReceived();
 };

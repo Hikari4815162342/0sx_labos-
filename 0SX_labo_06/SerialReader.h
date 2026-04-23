@@ -6,4 +6,5 @@ class SerialReader{
   public:
     SerialReader();
     int getCommand();
+    bool commandReceived();
 };
