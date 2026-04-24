@@ -70,16 +70,14 @@ void LEDMatrix::writeMessageAtPosition(){
   uint16_t startCharacter = this->positionBits / this->fontSize; 
   uint16_t i;
 
-  // Copier une portion du texte dans le tampon
   for (i = 0; i < this->BUFFER_SIZE - 1; i++) {
     buffer[i] = this->message[startCharacter + i];
     if (this->message[startCharacter + i] == '\0')
       break;
   }
 
-  buffer[this->BUFFER_SIZE - 1] = '\0'; // S'assurer que le tampon est bien terminé
+  buffer[this->BUFFER_SIZE - 1] = '\0';
 
-  // Afficher le texte en tenant compte du décalage de bits (scroll horizontal)
   u8g2->drawStr(-(this->positionBits & (this->fontSize - 1)), 7, buffer);
 }
 
