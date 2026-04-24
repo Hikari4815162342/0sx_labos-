@@ -4,6 +4,19 @@ LEDMatrix::LEDMatrix(U8G2* ledMatrix){
   u8g2 = ledMatrix;
 }
 
+void LEDMatrix::open(){
+  for(int i = 0; i <= 8; i++){
+    for (int j = 0; j <= 8; j++){
+      u8g2->drawPixel(i, j);
+    }
+  }
+}
+
+void LEDMatrix::off(){
+  u8g2->clearBuffer();
+  u8g2->sendBuffer();
+}
+
 LEDMatrixModes LEDMatrix::getMode() const { return this->mode; }
 void LEDMatrix::setMode(LEDMatrixModes mode){ this->mode = mode; }
 
@@ -81,18 +94,42 @@ void LEDMatrix::discount(){
   }  
 }
 
-void LEDMatrix::normal(){
+const uint8_t LEDMatrix::bitmapSmiley[] PROGMEM = {
+  B00111100,
+  B01000010,
+  B10100101,
+  B10000001,
+  B10100101,
+  B10011001,
+  B01000010,
+  B00111100
+};
 
+
+void LEDMatrix::normal(){
+  u8g2->drawXBMP(0, 0, 8, 8, bitmapSmiley);
 }
 
 void LEDMatrix::error(){
+  static unsigned long currentTime = 0;
+  static unsigned long lastTime = 0;
+  int interval = 1000;
 
+  currentTime = millis();
+
+  if (currentTime - lastTime >= interval){
+    lastTime = currentTime;
+    open();
+  }else{
+    off();
+  }
 }
 
 void LEDMatrix::close(){
-
+  off();
 }
 
 void LEDMatrix::emergency(){
-
+  u8g2->drawLine(0, 0, 7, 7);
+  u8g2->drawLine(7, 0, 0, 7);
 }
