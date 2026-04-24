@@ -3,6 +3,8 @@
 #include <U8g2lib.h>
 #include <OneButton.h>
 #include "LEDMatrix.h" 
+#include "LcdManager.h"
+#include <LCD_I2C.h>
 
 #define CLK_PIN  30
 #define DIN_PIN  34
@@ -25,9 +27,11 @@ int pinIR = 12;
 int pinEmergencyButton = 2;
 int command = 0;
 
+LCD_I2C lcd(0x27, 16, 2);
 OneButton emergency(pinEmergencyButton, true, true);
 
 LEDMatrix ledMatrix(&u8g2);
+LcdManager screen(&lcd, &ledMatrix);
 IRCommandReader commandReader;
 SerialReader serialReader;
 
@@ -36,6 +40,8 @@ void setup() {
   commandReader.init(pinIR);
   ledMatrix.init();
   emergency.attachClick(emergencyClick);
+  lcd.begin();
+  lcd.backlight();
 }
 
 void loop() {
@@ -60,14 +66,19 @@ void loop() {
     ledMatrix.update();
     u8g2.sendBuffer();
   }
+
+  screen.update();
 }
 
 void emergencyClick(){
   LEDMatrixModes mode = ledMatrix.getMode();
 
   if (mode == EMERGENCY){
+    command = 0;
     ledMatrix.setMode(CLOSE);
+    screen.setScreen(SCREEN_1);
   }else{
     ledMatrix.setMode(EMERGENCY);
+    screen.setScreen(EMERGENCY_SCREEN);
   }
 }

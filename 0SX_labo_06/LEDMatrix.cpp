@@ -2,6 +2,7 @@
 
 LEDMatrix::LEDMatrix(U8G2* ledMatrix){
   u8g2 = ledMatrix;
+  this->mode = CLOSE;
 }
 
 void LEDMatrix::open(){
@@ -32,12 +33,14 @@ void LEDMatrix::init(){
 
 void LEDMatrix::treatCommand(int command){
   LEDMatrixModes mode = -1;
+  LEDMatrixModes lastMode = this->mode;
+
   switch(command){
     case 1: mode = DISCOUNT; break;
     case 2: mode = NORMAL; break;
     case 3: mode = ERROR; break;
     case 4: mode = CLOSE; break;
-    default: break;
+    default: mode = lastMode; break;
   }
   setMode(mode);
 }
@@ -58,8 +61,6 @@ void LEDMatrix::update(){
       break;
     case EMERGENCY: 
       emergency(); 
-      break;
-    default: 
       break;
   }
 }
