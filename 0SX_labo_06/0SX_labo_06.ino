@@ -23,8 +23,8 @@ unsigned long currentTime = 0;
 unsigned long lastTime = 0;
 int interval = 500;
 
-int pinIR = 12;
-int pinEmergencyButton = 2;
+int pinIR = 2;
+int pinEmergencyButton = 12;
 int command = 0;
 
 LCD_I2C lcd(0x27, 16, 2);
