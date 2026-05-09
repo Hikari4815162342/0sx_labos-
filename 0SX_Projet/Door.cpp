@@ -31,7 +31,7 @@ void Door::readDistance(){
     distance = hc->dist();
   }
 
-  if (distance <= DIST_THRESHOLD && currentDoorState != WAIT && currentDoorState != EMERGENCY){
+  if (distance <= DIST_THRESHOLD && currentDoorState != WAIT && currentDoorState != EMERGENCY_DDOR){
     this->currentDoorState = OPEN;
   }
 }
@@ -57,7 +57,7 @@ void Door::update(){
       case CLOSE:
         close();
         break;
-      case EMERGENCY:
+      case EMERGENCY_DDOR:
         break;
       case CLOSED:
         break;

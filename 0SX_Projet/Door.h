@@ -10,7 +10,7 @@ enum DoorState{
   CLOSE,
   WAIT,
   CLOSED,
-  EMERGENCY
+  EMERGENCY_DDOR
 };
 
 class Door {
@@ -34,9 +34,7 @@ class Door {
     bool waitFirstTime = true;
     void open();
     void close();
-    void closed();
     void wait();
-    void emergency();
   public:
     Door(Servo* door, HCSR04* hc, const int PIN_SERVO);
     DoorState getState() const;
