@@ -1,9 +1,10 @@
 #include "LcdManager.h"
 
-LcdManager::LcdManager(LCD_I2C* lcd, Door* door, DCMotor* dc){
+LcdManager::LcdManager(LCD_I2C* lcd, Door* door, DCMotor* dc, LEDMatrix* matrix){
   this->lcd = lcd;
   this->door = door;
   this->dc = dc;
+  this->matrix = matrix;
   this->currentScreen = SCREEN_1;
   this->lastScreen = SCREEN_1;
 }
@@ -29,6 +30,7 @@ void LcdManager::update(){
     case SCREEN_1: screen1(); break;
     case SCREEN_2: screen2(); break;
     case SCREEN_3: screen3(); break;
+    case SCREEN_4: screen4(); break;
     case EMERGENCY_SCREEN: emergencyScreen(); break;
   }
 }
@@ -99,8 +101,36 @@ void LcdManager::screen3(){
 
   if (this->currentTime - lastScreenTime >= SCREEN_INTERVAL){
     lastScreenTime = this->currentTime;
-    currentScreen = SCREEN_1;
+    currentScreen = SCREEN_4;
   }
+}
+
+void LcdManager::screen4(){
+  LEDMatrixModes mode = matrix->getMode();
+  lcd->setCursor(0, 0);
+
+  String currentMode = "";
+  switch(mode){
+    case DISCOUNT:
+      currentMode = "Rabais";
+      break;
+    case NORMAL: 
+      currentMode = "Normal";
+      break;
+    case ERROR: 
+      currentMode = "Erreur"; 
+      break;
+    case SHUT_OFF: 
+      currentMode = "Fermer";
+      break;
+  }
+
+  printLcd("Mode : " + currentMode);
+
+  if (this->currentTime - lastScreenTime >= SCREEN_INTERVAL){
+    lastScreenTime = this->currentTime;
+    currentScreen = SCREEN_1;
+  }  
 }
 
 void LcdManager::emergencyScreen(){

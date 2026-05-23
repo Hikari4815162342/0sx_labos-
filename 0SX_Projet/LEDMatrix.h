@@ -8,8 +8,8 @@ enum LEDMatrixModes{
   DISCOUNT,
   NORMAL,
   ERROR,
-  CLOSE,
-  EMERGENCY
+  SHUT_OFF,
+  EMERGENCY_MATRIX
 };
 
 class LEDMatrix{
@@ -29,8 +29,8 @@ class LEDMatrix{
     void discount();
     void normal();
     void error();
-    void close();
-    void emergency();
+    void shutOff();
+    void emergencyMatrix();
   public:
     LEDMatrix(U8G2* ledMatrix);
     void init();
