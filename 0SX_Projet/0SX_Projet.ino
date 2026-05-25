@@ -12,6 +12,30 @@
 #include "SerialReader.h" 
 #include "IRCommandReader.h"
 #include <U8g2lib.h>
+#include <WiFiEspAT.h>
+#include <PubSubClient.h>
+
+#define HAS_SECRETS 1
+#define DEVICE_NAME "Raphael"
+
+#if HAS_SECRETS
+#include "arduino_secrets.h"
+
+const char ssid[] = SECRET_SSID;
+const char pass[] = SECRET_PASS;
+
+#endif
+
+#define AT_BAUD_RATE 115200
+
+#define MQTT_PORT 1883
+#define MQTT_USER "etdshawi"
+#define MQTT_PASS "shawi123"
+
+const char* mqttServer = "216.128.180.194";
+
+WiFiClient wifiClient;
+PubSubClient client(wifiClient);
 
 //Variables et objets labo4
 #define TRIGGER_PIN 7
@@ -72,7 +96,7 @@ SerialReader serialReader;
 LcdManager screen(&lcd, &door, &myDC, &ledMatrix);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(AT_BAUD_RATE);
   lcd.begin();
   lcd.backlight();
 
@@ -88,7 +112,24 @@ void setup() {
 
   pinMode(TRIGGER_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
+
+  wifiInit();
+
+  client.setServer(mqttServer, MQTT_PORT);
+  client.setCallback(mqttEvent);
+
+  if(!client.connect(DEVICE_NAME, MQTT_USER, MQTT_PASS)) {
+    Serial.println("Incapable de se connecter sur le serveur MQTT");
+    Serial.print("client.state : ");
+    Serial.println(client.state());
+  } else{
+    Serial.println("Connecté sur le serveur MQTT");
+  }
+
+  client.subscribe("magasin/8/set", 0);
+  delay(1000);
 }
+
 
  void loop() { 
   currentTime = millis();
@@ -97,15 +138,15 @@ void setup() {
   DoorState doorState = door.getState();
   DCState dcState = myDC.getState();
   LEDMatrixModes mode = ledMatrix.getMode();
-
+  
   if (doorState != EMERGENCY_DDOR && dcState != EMERGENCY_DC && mode != EMERGENCY_MATRIX){
-    if (commandReader.commandReceived()){
-      command = commandReader.getCommand();
+    if (commandReader.getEvent(command)){
+      ledMatrix.treatCommand(command);
     }else if (serialReader.commandReceived()){
       command = serialReader.getCommand();
+      ledMatrix.treatCommand(command);
     }
 
-    ledMatrix.treatCommand(command);
     door.readDistance();
     DCJoystick.update();
     myDC.updateDCMotor();
@@ -121,12 +162,14 @@ void setup() {
   door.update();
   DCLeds.update();
   screen.update();
+  client.loop();
+  publishInfos();
 }
 
 
 void onClickOpenDoor(){
   DoorState state = door.getState();
-  if (state == CLOSED || state == CLOSE){
+  if (state == CLOSED_DOOR || state == CLOSE){
     door.setState(OPEN);
   }
 }
@@ -149,5 +192,191 @@ void onClickEmergency(){
     screen.setScreen(EMERGENCY_SCREEN);
   }
 }
+
+void wifiInit() {
+  Serial3.begin(AT_BAUD_RATE);
+  WiFi.init(Serial3);
+
+  if (WiFi.status() == WL_NO_MODULE) {
+    Serial.println();
+    Serial.println("La communication avec le module WiFi a échoué!");
+    while (true) {
+      digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+      delay(50);
+    }
+  }
+
+  Serial.println("En attente de connexion au WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print('.');
+  }
+  Serial.println();
+
+  IPAddress ip = WiFi.localIP();
+  Serial.println();
+  Serial.println("Connecté au réseau WiFi.");
+  Serial.print("Adresse : ");
+  Serial.println(ip);
+
+  printWifiStatus();
+}
+
+void printWifiStatus() {
+
+  char ssid[33];
+  WiFi.SSID(ssid);
+  Serial.print("SSID: ");
+  Serial.println(ssid);
+
+  uint8_t bssid[6];
+  WiFi.BSSID(bssid);
+  Serial.print("BSSID: ");
+  printMacAddress(bssid);
+
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+  Serial.print("MAC: ");
+  printMacAddress(mac);
+
+  IPAddress ip = WiFi.localIP();
+  Serial.print("Adresse IP: ");
+  Serial.println(ip);
+
+  long rssi = WiFi.RSSI();
+  Serial.print("force du signal (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+}
+
+void printMacAddress(byte mac[]) {
+  for (int i = 5; i >= 0; i--) {
+    if (mac[i] < 16) {
+      Serial.print("0");
+    }
+    Serial.print(mac[i], HEX);
+    if (i > 0) {
+      Serial.print(":");
+    }
+  }
+  Serial.println();
+}
+
+
+
+void mqttEvent(char* topic, byte* payload, unsigned int length){
+  Serial.print("Message recu [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i=0;i<length;i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  char payloadStr[100];
+  memcpy(payloadStr, payload, length);
+  payloadStr[length] = '\0';
+
+  if (strcmp(topic, "magasin/8/set") == 0){
+    if (strstr(payloadStr, "rabais")){
+      ledMatrix.setMode(DISCOUNT);
+    }else if (strstr(payloadStr, "urgence")){
+      ledMatrix.setMode(EMERGENCY_MATRIX);
+    }else if (strstr(payloadStr, "erreur")){
+      ledMatrix.setMode(ERROR);
+    }else if (strstr(payloadStr, "ok")){
+      ledMatrix.setMode(NORMAL);
+    }
+  }
+}
+
+void publishInfos(){
+  static unsigned long lastPublishTime = 0;
+  const unsigned int rate = 10000;
+
+  static char message[200] = "";
+  static char sDirection[10] = "";
+  static char sMatrixState[10] = "";
+  static char sDoorState[10] = "";
+
+  DCState dcState = myDC.getState();
+  int speed = myDC.getSpeed();
+  LEDMatrixModes mode = ledMatrix.getMode();
+  DoorState doorState = door.getState();
+  int nbClients = door.getClients();
+  
+  if (currentTime - lastPublishTime < rate) return;
+
+  lastPublishTime = currentTime;
+
+  switch (dcState){
+    case FORWARD:
+      strcpy(sDirection, "droite");
+      break;
+    case BACKWARD:
+      strcpy(sDirection, "gauche");
+      break;
+    case OFF:
+      strcpy(sDirection, "stop");
+      break;
+  }
+
+  switch (doorState){
+    case OPEN:
+      strcpy(sDoorState, "move");
+      break;
+    case WAIT:
+      strcpy(sDoorState, "ouvert");
+      break;
+    case CLOSED_DOOR:
+      strcpy(sDoorState, "ferme");
+      break;
+  }
+
+  switch(mode){
+    case DISCOUNT:
+      strcpy(sMatrixState, "rabais");
+      break;
+    case NORMAL: 
+      strcpy(sMatrixState, "ok");
+      break;
+    case SHUT_OFF:
+      strcpy(sMatrixState, "ok");
+      break;
+    case ERROR: 
+      strcpy(sMatrixState, "erreur");
+      break;
+    case EMERGENCY_MATRIX: 
+      strcpy(sMatrixState, "urgence");
+      break;
+  }
+
+  sprintf(message, 
+      "{\"direction\":\"%s\","
+      "\"vitesse\":%d,"
+      "\"porte\":\"%s\","
+      "\"statut\":\"%s\","
+      "\"clients\":%d}",
+      sDirection, speed, sDoorState, sMatrixState, nbClients);
+
+  Serial.print("Envoie : ");
+  Serial.println(message);
+
+  if (!client.publish("magasin/8/state", message)){
+    reconnect();
+    Serial.println("Incapable d'envoyer le message!");
+  }else{
+    Serial.println("Message envoyé");
+  }
+}
+
+bool reconnect() {
+  bool result = client.connect(DEVICE_NAME, MQTT_USER, MQTT_PASS);
+  if(!result) {
+    Serial.println("Incapable de se connecter sur le serveur MQTT");
+  }
+  return result;
+}
+
 
 

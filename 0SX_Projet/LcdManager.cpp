@@ -37,7 +37,7 @@ void LcdManager::update(){
 
 void LcdManager::screen1(){
   
-DoorState state = door->getState();
+  DoorState state = door->getState();
   lcd->setCursor(0, 0);
 
   String currentState = "";
@@ -51,10 +51,10 @@ DoorState state = door->getState();
     case CLOSE:
       currentState = "Fermeture...";
       break;
-    case CLOSED:
+    case CLOSED_DOOR:
       currentState = "Porte fermee";
       break;
-    }
+  }
 
   printLcd(currentState);
 

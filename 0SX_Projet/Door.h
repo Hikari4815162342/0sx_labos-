@@ -9,7 +9,7 @@ enum DoorState{
   OPEN,
   CLOSE,
   WAIT,
-  CLOSED,
+  CLOSED_DOOR,
   EMERGENCY_DDOR
 };
 

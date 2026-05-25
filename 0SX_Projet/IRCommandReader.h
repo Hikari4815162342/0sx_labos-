@@ -6,6 +6,5 @@ class IRCommandReader{
   public:
     IRCommandReader();
     void init(int pin);
-    int getCommand();
-    bool commandReceived();
+    bool getEvent(int& command);
 };

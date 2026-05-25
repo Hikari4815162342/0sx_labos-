@@ -5,7 +5,7 @@ Door::Door(Servo* door, HCSR04* hc, int PIN_SERVO){
   this-> hc = hc;
   this->pinServo = PIN_SERVO;
   this->angle = MIN_ANGLE;
-  currentDoorState = CLOSED;
+  currentDoorState = CLOSED_DOOR;
   distance = 10;
   clients = 0;
 }
@@ -59,7 +59,7 @@ void Door::update(){
         break;
       case EMERGENCY_DDOR:
         break;
-      case CLOSED:
+      case CLOSED_DOOR:
         break;
     }
   }
@@ -104,7 +104,7 @@ void Door::close(){
   }else{
     angle = 10;
     door->detach();
-    this->currentDoorState = CLOSED;
+    this->currentDoorState = CLOSED_DOOR;
   }
   door->write(angle);
 }

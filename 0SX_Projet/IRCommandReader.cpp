@@ -8,32 +8,27 @@ void IRCommandReader::init(int pin){
   IrReceiver.begin(pin, ENABLE_LED_FEEDBACK);
 }
 
-bool IRCommandReader::commandReceived(){
-  if (IrReceiver.decode()){
-    return true;
+bool IRCommandReader::getEvent(int& command){
+  if (!IrReceiver.decode()){
+    return false;
   }
-  return false;
-}
-
-int IRCommandReader::getCommand(){
-  if (IrReceiver.decode()) {
-      int command = IrReceiver.decodedIRData.command;
-
-      if (IrReceiver.decodedIRData.flags && IRDATA_FLAGS_IS_REPEAT || command == 0) {
-        IrReceiver.resume();
-        return;
-      }
   
-    switch (command){
-        case 12: command = 1; break;
-        case 24: command = 2; break;
-        case 94: command = 3; break;
-        case 8: command = 4; break;
-        default: command = 0; break;
-    }
-    
+  if (IrReceiver.decodedIRData.flags && IRDATA_FLAGS_IS_REPEAT) {
     IrReceiver.resume();
-    return command;
+    return false;
   }
-  return 0;
+
+  int cmd = IrReceiver.decodedIRData.command;
+
+  IrReceiver.resume();
+
+  switch (cmd){
+    case 12: command = 1; break;
+    case 24: command = 2; break;
+    case 94: command = 3; break;
+    case 8: command = 4; break;
+    default: return false;
+  }
+    
+    return true;
 }
